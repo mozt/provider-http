@@ -83,6 +83,8 @@ spec:
                       properties:
                         body:
                           type: string
+                        comparetype:
+                          type: string
                         headers:
                           additionalProperties:
                             items:
@@ -366,6 +368,8 @@ spec:
               requestDetails:
                 properties:
                   body:
+                    type: string
+                  comparetype:
                     type: string
                   headers:
                     additionalProperties:

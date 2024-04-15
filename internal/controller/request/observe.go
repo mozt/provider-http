@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"encoding/base64"
+
 	"github.com/crossplane-contrib/provider-http/apis/request/v1alpha1"
 	httpClient "github.com/crossplane-contrib/provider-http/internal/clients/http"
 	"github.com/crossplane-contrib/provider-http/internal/controller/request/requestgen"
@@ -63,7 +65,15 @@ func (c *external) isUpToDate(ctx context.Context, cr *v1alpha1.Request) (Observ
 		return FailedObserve(), err
 	}
 
-	return c.compareResponseAndDesiredState(details, responseErr, desiredState)
+	var comparetype string
+	for _, s := range cr.Spec.ForProvider.Mappings {
+		if s.CompareType != "" {
+			comparetype = s.CompareType
+			break
+		}
+	}
+
+	return c.compareResponseAndDesiredState(details, responseErr, desiredState, comparetype)
 }
 
 func (c *external) isObjectValidForObservation(cr *v1alpha1.Request) bool {
@@ -71,13 +81,18 @@ func (c *external) isObjectValidForObservation(cr *v1alpha1.Request) bool {
 		!(cr.Status.RequestDetails.Method == http.MethodPost && utils.IsHTTPError(cr.Status.Response.StatusCode))
 }
 
-func (c *external) compareResponseAndDesiredState(details httpClient.HttpDetails, err error, desiredState string) (ObserveRequestDetails, error) {
+func (c *external) compareResponseAndDesiredState(details httpClient.HttpDetails, err error, desiredState string, comparetype string) (ObserveRequestDetails, error) {
 	observeRequestDetails := NewObserve(details, err, false)
 
 	if json.IsJSONString(details.HttpResponse.Body) && json.IsJSONString(desiredState) {
 		responseBodyMap := json.JsonStringToMap(details.HttpResponse.Body)
 		desiredStateMap := json.JsonStringToMap(desiredState)
-		observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
+		if comparetype == "gitlab-file" {
+			data, _ := base64.StdEncoding.DecodeString(responseBodyMap["content"].(string))
+			observeRequestDetails.Synced = desiredStateMap["content"].(string) == string(data[:]) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
+		} else {
+			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
+		}
 		return observeRequestDetails, nil
 	}
 
