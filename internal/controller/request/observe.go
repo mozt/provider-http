@@ -2,11 +2,10 @@ package request
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
 	"strings"
-
-	"crypto/sha256"
 
 	"github.com/crossplane-contrib/provider-http/apis/request/v1alpha1"
 	httpClient "github.com/crossplane-contrib/provider-http/internal/clients/http"
@@ -88,12 +87,20 @@ func (c *external) compareResponseAndDesiredState(details httpClient.HttpDetails
 	if json.IsJSONString(details.HttpResponse.Body) && json.IsJSONString(desiredState) {
 		responseBodyMap := json.JsonStringToMap(details.HttpResponse.Body)
 		desiredStateMap := json.JsonStringToMap(desiredState)
-		if comparetype == "gitlab-file" {
+
+		switch comparetype {
+		case "gitlab-file":
 			hash := sha256.Sum256([]byte(desiredStateMap["content"].(string)))
 			observeRequestDetails.Synced = hex.EncodeToString(hash[:]) == responseBodyMap["content_sha256"].(string) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
-		} else {
+		case "harbor-robot":
+			delete(responseBodyMap, "update_time")
+			delete(desiredStateMap, "update_time")
+			delete(desiredStateMap, "secret")
+			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
+		default:
 			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
 		}
+
 		return observeRequestDetails, nil
 	}
 
