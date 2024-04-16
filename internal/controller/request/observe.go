@@ -95,8 +95,10 @@ func (c *external) compareResponseAndDesiredState(details httpClient.HttpDetails
 		case "harbor-robot":
 			delete(responseBodyMap, "update_time")
 			delete(desiredStateMap, "update_time")
-			delete(desiredStateMap, "secret")
-			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
+			delete(responseBodyMap, "creation_time")
+			delete(desiredStateMap, "creation_time")
+			delete(desiredStateMap, "secret") // Setting it in PUT is useless - this api doesnt update the secret
+			fallthrough
 		default:
 			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
 		}

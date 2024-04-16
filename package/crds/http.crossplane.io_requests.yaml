@@ -84,6 +84,9 @@ spec:
                         body:
                           type: string
                         comparetype:
+                          enum:
+                          - gitlab-file
+                          - harbor-robot
                           type: string
                         headers:
                           additionalProperties:
@@ -370,6 +373,9 @@ spec:
                   body:
                     type: string
                   comparetype:
+                    enum:
+                    - gitlab-file
+                    - harbor-robot
                     type: string
                   headers:
                     additionalProperties:

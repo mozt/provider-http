@@ -39,11 +39,12 @@ type RequestParameters struct {
 
 type Mapping struct {
 	// +kubebuilder:validation:Enum=POST;GET;PUT;DELETE
-	Method      string              `json:"method"`
-	Body        string              `json:"body,omitempty"`
-	URL         string              `json:"url"`
-	Headers     map[string][]string `json:"headers,omitempty"`
-	CompareType string              `json:"comparetype,omitempty"`
+	Method  string              `json:"method"`
+	Body    string              `json:"body,omitempty"`
+	URL     string              `json:"url"`
+	Headers map[string][]string `json:"headers,omitempty"`
+	// +kubebuilder:validation:Enum=gitlab-file;harbor-robot
+	CompareType string `json:"comparetype,omitempty"`
 }
 
 type Payload struct {
