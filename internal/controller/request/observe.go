@@ -2,10 +2,11 @@ package request
 
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"strings"
 
-	"encoding/base64"
+	"crypto/sha256"
 
 	"github.com/crossplane-contrib/provider-http/apis/request/v1alpha1"
 	httpClient "github.com/crossplane-contrib/provider-http/internal/clients/http"
@@ -88,8 +89,8 @@ func (c *external) compareResponseAndDesiredState(details httpClient.HttpDetails
 		responseBodyMap := json.JsonStringToMap(details.HttpResponse.Body)
 		desiredStateMap := json.JsonStringToMap(desiredState)
 		if comparetype == "gitlab-file" {
-			data, _ := base64.StdEncoding.DecodeString(responseBodyMap["content"].(string))
-			observeRequestDetails.Synced = desiredStateMap["content"].(string) == string(data[:]) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
+			hash := sha256.Sum256([]byte(desiredStateMap["content"].(string)))
+			observeRequestDetails.Synced = hex.EncodeToString(hash[:]) == responseBodyMap["content_sha256"].(string) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
 		} else {
 			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
 		}
