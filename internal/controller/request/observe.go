@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	ej "encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/crossplane-contrib/provider-http/apis/request/v1alpha1"
@@ -98,6 +100,19 @@ func (c *external) compareResponseAndDesiredState(details httpClient.HttpDetails
 			delete(responseBodyMap, "creation_time")
 			delete(desiredStateMap, "creation_time")
 			delete(desiredStateMap, "secret") // Setting it in PUT is useless - this api doesnt update the secret
+			// Need to sort permissions slice, without it updates are sometimes triggered
+			comp := func(i, j interface{}) int {
+				mi, _ := ej.Marshal(i)
+				mj, _ := ej.Marshal(j)
+				if string(mi) < string(mj) {
+					return -1
+				} else if string(mi) == string(mj) {
+					return 0
+				}
+				return 1
+			}
+			slices.SortStableFunc(responseBodyMap["permissions"].([]interface{}), comp)
+			slices.SortStableFunc(desiredStateMap["permissions"].([]interface{}), comp)
 			fallthrough
 		default:
 			observeRequestDetails.Synced = json.Contains(responseBodyMap, desiredStateMap) && utils.IsHTTPSuccess(details.HttpResponse.StatusCode)
